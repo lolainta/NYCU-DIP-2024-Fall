@@ -5,6 +5,8 @@ import numpy as np
 """
 TODO Part 1: Gamma correction
 """
+
+
 def gamma_correction():
     raise NotImplementedError
 
@@ -12,6 +14,8 @@ def gamma_correction():
 """
 TODO Part 2: Histogram equalization
 """
+
+
 def histogram_equalization():
     raise NotImplementedError
 
@@ -19,6 +23,8 @@ def histogram_equalization():
 """
 Bonus
 """
+
+
 def other_enhancement_algorithm():
     raise NotImplementedError
 
@@ -26,17 +32,22 @@ def other_enhancement_algorithm():
 """
 Main function
 """
+
+
 def main():
     img = cv2.imread("data/image_enhancement/input.bmp")
 
     # TODO: modify the hyperparameter
-    gamma_list = [1, 1, 1] # gamma value for gamma correction
+    gamma_list = [1, 1, 1]  # gamma value for gamma correction
 
     # TODO Part 1: Gamma correction
     for gamma in gamma_list:
         gamma_correction_img = gamma_correction()
 
-        cv2.imshow("Gamma correction | Gamma = {}".format(gamma), np.vstack([img, gamma_correction_img]))
+        cv2.imshow(
+            "Gamma correction | Gamma = {}".format(gamma),
+            np.vstack([img, gamma_correction_img]),
+        )
         cv2.waitKey(0)
 
     # TODO Part 2: Image enhancement using the better balanced image as input
