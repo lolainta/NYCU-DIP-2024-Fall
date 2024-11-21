@@ -38,7 +38,7 @@ def gamma_correction(img: np.ndarray, gamma: float) -> np.ndarray:
 
 
 """
-TODO Part 2: Histogram equalization
+Part 2: Histogram equalization
 """
 
 
@@ -115,7 +115,7 @@ def main():
         np.vstack(merged),
     )
 
-    # TODO Part 2: Image enhancement using the better balanced image as input
+    # Part 2: Image enhancement using the better balanced image as input
     histogram_equalization_img = histogram_equalization(img)
 
     cv2.imwrite(
