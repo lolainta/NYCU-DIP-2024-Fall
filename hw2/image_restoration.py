@@ -83,12 +83,63 @@ def wiener_filtering(img: np.ndarray, psf: np.ndarray, snr: float) -> np.ndarray
 
 
 """
-TODO Part 3: Constrained least squares filtering
+Part 3: Constrained least squares filtering
 """
 
 
-def constrained_least_square_filtering():
-    raise NotImplementedError
+def constrained_least_square_filtering(
+    img: np.ndarray, psf: np.ndarray, lambd: float = 1e-3
+) -> np.ndarray:
+    """
+    Constrained least squares filtering is used to restore an image from a blurred image.
+    The formula is:
+        I_restored = argmin ||I_blurred - I_restored * PSF||^2 + lambda * ||Laplacian(I_restored)||^2
+    where I_restored is the restored image, I_blurred is the blurred image, PSF is the point spread function,
+    and lambda is the regularization parameter.
+
+    Args:
+        img (np.ndarray): The blurred image.
+        psf (np.ndarray): The point spread function.
+
+    Returns:
+        np.ndarray: The restored image.
+    """
+    restored_image = np.zeros(img.shape)
+    for channel in range(3):
+        img_fft = np.fft.fft2(img[:, :, channel])
+        img_fft = np.fft.fftshift(img_fft)
+
+        psf_fft = np.fft.fft2(psf, img.shape[:2])
+        psf_fft = np.fft.fftshift(psf_fft)
+
+        # Compute the Fourier transform of the Laplacian operator
+        laplacian_fft = np.fft.fft2(
+            np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=np.float32),
+            img.shape[:2],
+        )
+        # laplacian_fft = np.fft.fftshift(laplacian_fft)
+
+        # Compute the denominator of the CLS filter
+        denominator = np.abs(psf_fft) ** 2 + lambd * np.abs(laplacian_fft)
+
+        # Compute the CLS filter
+        cls_filter = np.conj(psf_fft) / denominator
+
+        # Compute the Fourier transform of the restored image
+        restored_img_fft = img_fft * cls_filter
+
+        # Compute the restored image
+        restored_img = np.fft.ifft2(restored_img_fft)
+        restored_img = np.fft.ifftshift(restored_img)
+
+        # Normalize the restored image
+        restored_img = np.real(restored_img)
+
+        # Clip the restored image to [0, 255]
+        restored_img = np.clip(restored_img, 0, 255).astype(np.uint8)
+
+        restored_image[:, :, channel] = restored_img
+    return restored_image
 
 
 """
@@ -101,7 +152,7 @@ def other_restoration_algorithm():
 
 
 def compute_PSNR(image_original, image_restored):
-    # PSNR = 10 * log10(max_pixel^2 / MSE)
+    # PSNR = 10 * log10(max_pixel ^ 2 / MSE)
     psnr = 10 * np.log10(
         255**2
         / np.mean(
@@ -134,24 +185,23 @@ def main():
         psf = generate_motion_blur_psf(shape[:2], length, angle)
 
         # Part 2: Wiener filtering
-        wiener_img = wiener_filtering(img_blurred, psf, snr=0.01)
+        wiener_img = wiener_filtering(img_blurred, psf, snr=7e-3)
 
-        # TODO Part 3: Constrained least squares filtering
-        # constrained_least_square_img = constrained_least_square_filtering()
-        constrained_least_square_img = wiener_img
+        # Part 3: Constrained least squares filtering
+        cls_img = constrained_least_square_filtering(img_blurred, psf, lambd=1e-3)
 
         print(f"\n---------- Testcase {i} ----------".format(i))
         print("Method: Wiener filtering")
         print(f"PSNR = {compute_PSNR(img_original, wiener_img)}\n")
 
         print("Method: Constrained least squares filtering")
-        print(f"PSNR = {compute_PSNR(img_original, constrained_least_square_img)}\n")
+        print(f"PSNR = {compute_PSNR(img_original, cls_img)}\n")
 
         os.makedirs(f"output/image_restoration/testcase{i}", exist_ok=True)
         cv2.imwrite(f"output/image_restoration/testcase{i}/wiener_img.png", wiener_img)
-        # cv2.imshow(
-        #     "window", np.hstack([img_blurred, wiener_img, constrained_least_square_img])
-        # )
+        cv2.imwrite(f"output/image_restoration/testcase{i}/cls_img.png", cls_img)
+        # cv2.imshow("window", np.hstack([img_blurred, wiener_img, cls_img]))
+
         cv2.waitKey(0)
 
 
