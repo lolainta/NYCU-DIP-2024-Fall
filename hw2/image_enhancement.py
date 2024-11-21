@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+from copy import deepcopy
 
 
 """
@@ -56,6 +57,9 @@ def histogram_equalization(img: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: The output image.
     """
+
+    img = img.astype(np.uint8)
+
     # Compute the histogram of the input image
     hist, _ = np.histogram(img.flatten(), 256, (0, 256))
 
@@ -63,7 +67,8 @@ def histogram_equalization(img: np.ndarray) -> np.ndarray:
     cdf = hist.cumsum()
 
     # Normalize the CDF to [0, 255]
-    cdf = (cdf - cdf.min()) * 255 / (cdf.max() - cdf.min())
+    cdf = (cdf - cdf.min()) * 255 / (cdf.max() - cdf.min() + 1e-10)
+    cdf = np.clip(cdf, 0, 255).astype(np.uint8)
 
     # Apply the histogram equalization
     img = cdf[img]
@@ -76,8 +81,38 @@ Bonus
 """
 
 
-def other_enhancement_algorithm():
-    raise NotImplementedError
+def histogram_equalization_color(img: np.ndarray) -> np.ndarray:
+    ret = deepcopy(img)
+    img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+    img_yuv[:, :, 0] = histogram_equalization(img_yuv[:, :, 0])
+    ret = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+    return ret
+
+
+def adaptive_histogram_equalization(img: np.ndarray, block_size: int) -> np.ndarray:
+    """
+    Adaptive histogram equalization is used to enhance the contrast of an image locally.
+    The image is divided into blocks of size block_size x block_size, and histogram equalization
+    is applied to each block separately.
+
+    Args:
+        img (np.ndarray): The input image.
+        block_size (int): The size of the blocks for local histogram equalization.
+
+    Returns:
+        np.ndarray: The output image.
+    """
+    ret = np.zeros_like(img)
+
+    # Apply adaptive histogram equalization
+    for c in range(3):
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(block_size, block_size))
+        ret[:, :, c] = clahe.apply(img[:, :, c])
+
+    # Convert the image to uint8
+    img = img.astype(np.uint8)
+
+    return ret
 
 
 """
@@ -91,7 +126,7 @@ def main():
     # Modify the hyperparameter
     gamma_list = [1 / 4, 1 / 3, 1 / 2, 1, 2, 3, 4]
 
-    merged = [img]
+    merged = [deepcopy(img)]
     # Part 1: Gamma correction
     for gamma in gamma_list:
         gamma_correction_img = gamma_correction(img, gamma)
@@ -110,9 +145,19 @@ def main():
         )
         merged.append(gamma_correction_img)
 
+    cv2.putText(
+        merged[0],
+        "Original",
+        (10, 30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (255, 255, 255),
+        2,
+    )
+
     cv2.imwrite(
         "output/image_enhancement/gamma_correction.png",
-        np.vstack(merged),
+        np.hstack(merged),
     )
 
     # Part 2: Image enhancement using the better balanced image as input
@@ -120,10 +165,26 @@ def main():
 
     cv2.imwrite(
         "output/image_enhancement/histogram_equalization.png",
-        histogram_equalization_img,
+        np.hstack([img, histogram_equalization_img]),
     )
-    # cv2.imshow("Histogram equalization", np.vstack([img, histogram_equalization_img]))
     cv2.waitKey(0)
+
+    # Bonus1: Color image enhancement
+    histogram_equalization_color_img = histogram_equalization_color(img)
+    cv2.imwrite(
+        "output/image_enhancement/histogram_equalization_color.png",
+        np.hstack([img, histogram_equalization_color_img]),
+    )
+
+    # Bonus2: Adaptive histogram equalization
+    block_size = 16
+    adaptive_histogram_equalization_img = adaptive_histogram_equalization(
+        img, block_size
+    )
+    cv2.imwrite(
+        "output/image_enhancement/adaptive_histogram_equalization.png",
+        np.hstack([img, adaptive_histogram_equalization_img]),
+    )
 
 
 if __name__ == "__main__":

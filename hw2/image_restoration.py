@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+from copy import deepcopy
 
 """
 Part 1: Motion blur PSF generation
@@ -38,6 +39,9 @@ def generate_motion_blur_psf(shape: tuple, length: int, angle: int) -> np.ndarra
         (255, 255, 255),
         1,
     )
+
+    print("PSF shape:", psf.shape)
+    cv2.imwrite("output/image_restoration/psf.png", psf)
 
     # Normalize the PSF
     psf = psf / np.sum(psf)
@@ -168,7 +172,11 @@ Main function
 
 
 def main():
+
     for i in range(1, 3):
+        print(f"\n---------- Testcase {i} ----------".format(i))
+        os.makedirs(f"output/image_restoration/testcase{i}", exist_ok=True)
+
         img_original = cv2.imread(
             f"data/image_restoration/testcase{i}/input_original.png"
         )
@@ -185,22 +193,73 @@ def main():
         psf = generate_motion_blur_psf(shape[:2], length, angle)
 
         # Part 2: Wiener filtering
-        wiener_img = wiener_filtering(img_blurred, psf, snr=7e-3)
+        wieners = [deepcopy(img_blurred)]
+        cv2.putText(
+            wieners[0],
+            "Original",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+        for snr in [1e-4, 1e-3, 1e-2, 1e-1, 1]:
+            print(f"Method: Wiener filtering with SNR = {snr}")
+            wiener_img = wiener_filtering(img_blurred, psf, snr=snr)
+            cv2.putText(
+                wiener_img,
+                f"SNR = {snr}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
+            wieners.append(wiener_img)
+            cv2.imwrite(
+                f"output/image_restoration/testcase{i}/wiener_{snr}.png", wiener_img
+            )
+            print(f"PSNR = {compute_PSNR(img_original, wiener_img)}\n")
+
+        cv2.imwrite(
+            f"output/image_restoration/testcase{i}/wiener_img.png", np.hstack(wieners)
+        )
 
         # Part 3: Constrained least squares filtering
-        cls_img = constrained_least_square_filtering(img_blurred, psf, lambd=1e-3)
-
-        print(f"\n---------- Testcase {i} ----------".format(i))
-        print("Method: Wiener filtering")
-        print(f"PSNR = {compute_PSNR(img_original, wiener_img)}\n")
-
-        print("Method: Constrained least squares filtering")
-        print(f"PSNR = {compute_PSNR(img_original, cls_img)}\n")
-
-        os.makedirs(f"output/image_restoration/testcase{i}", exist_ok=True)
-        cv2.imwrite(f"output/image_restoration/testcase{i}/wiener_img.png", wiener_img)
-        cv2.imwrite(f"output/image_restoration/testcase{i}/cls_img.png", cls_img)
-        # cv2.imshow("window", np.hstack([img_blurred, wiener_img, cls_img]))
+        clses = [deepcopy(img_blurred)]
+        cv2.putText(
+            clses[0],
+            "Original",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+        for lambd in [1e-4, 1e-3, 1e-2, 1e-1, 1]:
+            print(f"Method: Constrained least squares filtering with lambda = {lambd}")
+            cls_img = constrained_least_square_filtering(img_blurred, psf, lambd=lambd)
+            cv2.putText(
+                cls_img,
+                f"Lambda = {lambd}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
+            clses.append(cls_img)
+            print(f"PSNR = {compute_PSNR(img_original, cls_img)}\n")
+            cv2.imwrite(
+                f"output/image_restoration/testcase{i}/cls_{lambd}.png", cls_img
+            )
+        cv2.imwrite(
+            f"output/image_restoration/testcase{i}/cls_img.png", np.hstack(clses)
+        )
 
         cv2.waitKey(0)
 
