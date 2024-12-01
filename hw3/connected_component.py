@@ -13,7 +13,7 @@ def get_label_color(label):
 
 
 """
-TODO Binary transfer
+Binary transfer
 """
 
 
@@ -28,7 +28,7 @@ def to_binary(img):
 
 
 """
-TODO Two-pass algorithm
+Two-pass algorithm
 """
 
 
@@ -86,7 +86,7 @@ def other_cca_algorithm():
 
 
 """
-TODO Color mapping
+Color mapping
 """
 
 
