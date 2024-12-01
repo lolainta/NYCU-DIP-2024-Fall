@@ -4,21 +4,36 @@ import os
 
 
 """
-TODO White patch algorithm
+White patch algorithm
 """
 
 
 def white_patch_algorithm(img):
-    raise NotImplementedError
+    img = img.astype(np.float32)
+    img = img / 255
+    R, G, B = img[:, :, 0], img[:, :, 1], img[:, :, 2]
+    R_max, G_max, B_max = np.max(R), np.max(G), np.max(B)
+    img[:, :, 0] = R / R_max
+    img[:, :, 1] = G / G_max
+    img[:, :, 2] = B / B_max
+    return (img * 255).astype(np.uint8)
 
 
 """
-TODO Gray-world algorithm
+Gray-world algorithm
 """
 
 
 def gray_world_algorithm(img):
-    raise NotImplementedError
+    img = img.astype(np.float32)
+    img = img / 255
+    R, G, B = img[:, :, 0], img[:, :, 1], img[:, :, 2]
+    R_avg, G_avg, B_avg = np.mean(R), np.mean(G), np.mean(B)
+    avg = (R_avg + G_avg + B_avg) / 3
+    img[:, :, 0] = R * avg / R_avg
+    img[:, :, 1] = G * avg / G_avg
+    img[:, :, 2] = B * avg / B_avg
+    return (img * 255).astype(np.uint8)
 
 
 """
@@ -41,7 +56,7 @@ def main():
     for i in range(2):
         img = cv2.imread(f"data/color_correction/input{i+1}.bmp")
 
-        # TODO White-balance algorithm
+        # White-balance algorithm
         white_patch_img = white_patch_algorithm(img)
         gray_world_img = gray_world_algorithm(img)
 
