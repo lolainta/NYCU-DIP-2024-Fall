@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import os
 from dsu import DSU
-from random import randint
+from tqdm import trange
 
 
 def get_label_color(label):
@@ -36,7 +36,7 @@ def two_pass(img, connectivity):
     m, n = img.shape
     dsu = DSU(m * n)
     ret = np.zeros((m, n), dtype=np.uint32)
-    for i in range(m):
+    for i in trange(m):
         for j in range(n):
             if img[i][j] == 0:
                 continue
@@ -68,12 +68,54 @@ def two_pass(img, connectivity):
 
 
 """
-TODO Seed filling algorithm
+Seed filling algorithm
 """
 
 
 def seed_filling(img, connectivity):
-    raise NotImplementedError
+    m, n = img.shape
+    ret = np.zeros((m, n), dtype=np.uint32)
+    label = 0
+    for i in trange(m):
+        for j in range(n):
+            if img[i][j] == 0:
+                continue
+            if ret[i][j] == 0:
+                label += 1
+                ret[i][j] = label
+                stack = [(i, j)]
+                while stack:
+                    x, y = stack.pop()
+                    if connectivity == 4:
+                        for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                            nx, ny = x + dx, y + dy
+                            if nx < 0 or nx >= m or ny < 0 or ny >= n:
+                                continue
+                            if img[nx][ny] == 0 or ret[nx][ny] != 0:
+                                continue
+                            ret[nx][ny] = label
+                            stack.append((nx, ny))
+                    elif connectivity == 8:
+                        for dx, dy in [
+                            (1, 0),
+                            (-1, 0),
+                            (0, 1),
+                            (0, -1),
+                            (1, 1),
+                            (-1, 1),
+                            (1, -1),
+                            (-1, -1),
+                        ]:
+                            nx, ny = x + dx, y + dy
+                            if nx < 0 or nx >= m or ny < 0 or ny >= n:
+                                continue
+                            if img[nx][ny] == 0 or ret[nx][ny] != 0:
+                                continue
+                            ret[nx][ny] = label
+                            stack.append((nx, ny))
+                    else:
+                        raise ValueError("Connectivity should be 4 or 8")
+    return ret
 
 
 """
@@ -93,7 +135,7 @@ Color mapping
 def color_mapping(label):
     m, n = label.shape
     ret = np.zeros((m, n, 3), dtype=np.uint8)
-    for i in range(m):
+    for i in trange(m):
         for j in range(n):
             ret[i][j] = get_label_color(label[i][j])
     return ret
@@ -116,29 +158,33 @@ def main():
         print(f"Reading image {i+1}")
         img = cv2.imread(f"data/connected_component/input{i+1}.png")
 
-        # TODO Part1: Transfer to binary image
+        # Part1: Transfer to binary image
         binary_img = to_binary(img)
         cv2.imwrite(os.path.join(out_dir, f"input{i+1}_binary.png"), binary_img)
 
         for connectivity in connectivity_type:
             print(f"Connectivity: {connectivity}")
 
-            # TODO Part2: CCA algorithm
+            # Part2: CCA algorithm
+            print("Two pass algorithm")
             two_pass_label = two_pass(binary_img, connectivity)
-            # seed_filling_label = seed_filling(binary_img, connectivity)
+            print("Seed filling algorithm")
+            seed_filling_label = seed_filling(binary_img, connectivity)
 
-            # TODO Part3: Color mapping
+            # Part3: Color mapping
+            print("Coloring two pass label")
             two_pass_color = color_mapping(two_pass_label)
-            # seed_filling_color = color_mapping(seed_filling_label)
+            print("Coloring seed filling label")
+            seed_filling_color = color_mapping(seed_filling_label)
 
             cv2.imwrite(
                 os.path.join(out_dir_two_pass, f"input{i+1}_c{connectivity}.png"),
                 two_pass_color,
             )
-            # cv2.imwrite(
-            #     os.path.join(out_dir_seed_filling, f"input{i+1}_c{connectivity}.png"),
-            #     seed_filling_color,
-            # )
+            cv2.imwrite(
+                os.path.join(out_dir_seed_filling, f"input{i+1}_c{connectivity}.png"),
+                seed_filling_color,
+            )
 
 
 if __name__ == "__main__":
